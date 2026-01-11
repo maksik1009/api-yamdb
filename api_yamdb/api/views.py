@@ -5,24 +5,27 @@ from django.core.mail import send_mail
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, viewsets, permissions, filters, serializers
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.views import APIView
+from django.contrib.auth import get_user_model
 
 from .permissions import IsAdmin
 from .serializers import (
-    SignupSerializer, TokenObtainSerializer, UserSerializer, UserMeSerializer)
+    SignupSerializer, TokenObtainSerializer, UserSerializer)
 from django.shortcuts import get_object_or_404
 from api.serializers import (
     CommentSerializer, TitleSerializer, ReviewSerializer)
-from reviews.models import Review, Title, User
+from reviews.models import Review, Title
 
 USERNAME_ERROR_MESSAGE = 'Пользователь с таким username уже зарегистрирован'
 EMAIL_ERROR_MESSAGE = 'Такой email уже занят другим пользователем'
 USERNAME_EMAIL_MISMATCH = 'username и email принадлежат разным аккаунтам'
 EMAIL_ALIEN_ERROR_MESSAGE = 'Чужой email.'
+
+
+User = get_user_model()
 
 
 class SignupView(APIView):
@@ -35,7 +38,6 @@ class SignupView(APIView):
         user_by_username = User.objects.filter(username=username).first()
         user_by_email = User.objects.filter(email=email).first()
 
-        # 1) Оба существуют, но не соответствуют одному и тому же объекту
         if (user_by_username and user_by_email
                 and user_by_username != user_by_email):
             raise serializers.ValidationError({
@@ -43,29 +45,23 @@ class SignupView(APIView):
                 'email': [EMAIL_ALIEN_ERROR_MESSAGE]
             })
 
-        # 2) Оба существуют и соответствуют
         if (
             user_by_username
             and user_by_email
             and user_by_username == user_by_email
         ):
             user = user_by_username
-            # высылаем код
-            ...
 
-        # 3) Существует только username (новый email) — ошибка по email
         elif user_by_username:
             raise serializers.ValidationError({
                 'username': [EMAIL_ERROR_MESSAGE]
             })
 
-        # 4) Существует только email (новый username) — ошибка по username
         elif user_by_email:
             raise serializers.ValidationError({
                 'email': [EMAIL_ALIEN_ERROR_MESSAGE]
             })
 
-        # 5) Ни username, ни email не существуют — создаём нового пользователя
         else:
             user = User.objects.create(username=username, email=email)
 
@@ -90,7 +86,6 @@ class SignupView(APIView):
 
         return Response(
             {'email': email, 'username': username}
-            # ,            status=status.HTTP_200_OK
         )
 
 
@@ -119,41 +114,42 @@ class TokenObtainView(APIView):
 
 class UserPagination(PageNumberPagination):
     """Класс для постраничной навигации"""
-    page_size = 10  # увеличили количество записей на одной странице
+    page_size = 10
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """Набор представлений для управления пользователями"""
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
     pagination_class = UserPagination
     lookup_field = 'username'
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name', 'role']
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_permissions(self):
-        if self.action == 'me':
-            return [IsAuthenticated()]
+        if self.action == 'me' or (
+            self.request.method == 'DELETE'
+            and self.request.path.endswith('/me/')
+        ):
+            return [permissions.IsAuthenticated()]
         return [IsAdmin()]
 
-    def get_serializer_class(self):
-        if self.action == 'me':
-            return UserMeSerializer
-        return UserSerializer
-
-    @action(detail=False, methods=['GET', 'PATCH'], url_path='me')
+    @action(
+        detail=False,
+        methods=['get', 'patch'],
+        url_path='me',
+        permission_classes=[permissions.IsAuthenticated]
+    )
     def me(self, request):
+        user = request.user
         if request.method == 'GET':
-            serializer = self.get_serializer(request.user)
-            return Response(serializer.data)
+            serializer = self.get_serializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-        serializer = self.get_serializer(
-            request.user, data=request.data, partial=True
-        )
+        serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        serializer.save(role=user.role)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TitleViewSet(viewsets.ModelViewSet):

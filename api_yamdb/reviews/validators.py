@@ -5,8 +5,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 
 
-# FORBIDDEN_USERNAMES = ['me',]
-
 def check_username(username):
     if username.upper() in (
             name.upper()

@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.contrib.auth.models import User
+
 
 from reviews.models import (
     MAX_USERNAME_LENGTH, MAX_EMAIL_LENGTH, Comment, Review, Title)
@@ -13,13 +15,9 @@ User = get_user_model()
 
 class SignupSerializer(UsernameValidator, serializers.Serializer):
     username = serializers.CharField(
-        required=True,
-        max_length=MAX_USERNAME_LENGTH
-    )
+        required=True, max_length=MAX_USERNAME_LENGTH)
     email = serializers.EmailField(
-        required=True,
-        max_length=MAX_EMAIL_LENGTH
-    )
+        required=True, max_length=MAX_EMAIL_LENGTH)
 
     def create(self, validated_data):
         """Переопределённая логика создания пользователя"""
@@ -34,7 +32,7 @@ class SignupSerializer(UsernameValidator, serializers.Serializer):
         model = User
         fields = ('username', 'email', 'password')
         extra_kwargs = {
-            'password': {'write_only': True},  # Поле пароля доступно только для записи
+            'password': {'write_only': True}
         }
 
 
@@ -52,8 +50,13 @@ class UserSerializer(UsernameValidator, serializers.ModelSerializer):
             'username', 'email', 'first_name', 'last_name', 'bio', 'role')
 
 
-class UserMeSerializer(UserSerializer):
-    class Meta(UserSerializer.Meta):
+class UserMeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name',
+            'last_name', 'bio', 'role'
+        )
         read_only_fields = ('role',)
 
 
@@ -94,3 +97,12 @@ class ReviewSerializer(BaseReviewCommentSerializer):
         if existing_review and self.context['request'].method == 'POST':
             raise ValidationError("Вы уже оставили отзыв.")
         return attrs
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
+        )
+        read_only_fields = ('role',)
