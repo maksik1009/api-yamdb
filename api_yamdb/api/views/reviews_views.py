@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
-
+from django.db.models import Avg
 
 from reviews.models import Category, Genre, Title, Review
 from api.serializers.reviews_serializers import (
@@ -10,7 +10,7 @@ from api.serializers.reviews_serializers import (
 )
 from api.viewsets import CategoryGenreViewSet
 from api.filters import TitleFilter
-from api.permissions import IsAdminOrReadOnly
+from api.permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
 
 
 class CategoryViewSet(CategoryGenreViewSet):
@@ -25,7 +25,9 @@ class GenreViewSet(CategoryGenreViewSet):
 
 class TitleViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
-    queryset = Title.objects.all()
+    queryset = Title.objects.annotate(
+        rating=Avg('reviews__score')
+    ).order_by('id')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
@@ -38,6 +40,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_review(self):
         return get_object_or_404(Review, pk=self.kwargs.get('review_id'))
@@ -51,6 +55,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    permission_classes = [IsOwnerOrReadOnly]
 
     def get_title(self):
         return get_object_or_404(Title, pk=self.kwargs.get('title_id'))
