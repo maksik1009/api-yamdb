@@ -11,13 +11,10 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 
-from .permissions import IsAdmin
-from .serializers import (
+from api.permissions import IsAdmin
+from api.serializers.users_serializers import (
     SignupSerializer, TokenObtainSerializer, UserSerializer)
 from django.shortcuts import get_object_or_404
-from api.serializers import (
-    CommentSerializer, TitleSerializer, ReviewSerializer)
-from reviews.models import Review, Title
 
 USERNAME_ERROR_MESSAGE = 'Пользователь с таким username уже зарегистрирован'
 EMAIL_ERROR_MESSAGE = 'Такой email уже занят другим пользователем'
@@ -150,37 +147,3 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(role=user.role)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class TitleViewSet(viewsets.ModelViewSet):
-    """Представления для объектов Title"""
-    queryset = Title.objects.all()
-    serializer_class = TitleSerializer
-
-
-class CommentViewSet(viewsets.ModelViewSet):
-    """Представления для объектов Comment"""
-    serializer_class = CommentSerializer
-
-    def get_review(self):
-        return get_object_or_404(Review, pk=self.kwargs.get('review_id'))
-
-    def get_queryset(self):
-        return self.get_review().comments.all()
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user, review=self.get_review())
-
-
-class ReviewViewSet(viewsets.ModelViewSet):
-    """Представления для объектов Review"""
-    serializer_class = ReviewSerializer
-
-    def get_title(self):
-        return get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-
-    def get_queryset(self):
-        return self.get_title().reviews.all()
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user, title=self.get_title())

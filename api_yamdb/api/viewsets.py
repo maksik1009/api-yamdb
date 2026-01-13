@@ -1,4 +1,6 @@
-from rest_framework import viewsets, mixins, pagination, filters
+from rest_framework import viewsets, mixins, pagination, filters, permissions
+
+from .permissions import IsAdminOrReadOnly
 
 
 class CategoryGenreViewSet(
@@ -11,3 +13,6 @@ class CategoryGenreViewSet(
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
+    permission_classes = (
+        IsAdminOrReadOnly,
+    )

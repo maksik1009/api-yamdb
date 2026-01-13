@@ -2,8 +2,12 @@ import csv
 import os
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from reviews.models import Category, Genre, Title  # Comment, Review, User
+from reviews.models import Category, Genre, Title, Comment, Review
+
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -11,12 +15,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         files_to_methods = [
-            # ('users.csv', self.import_users),
+            ('users.csv', self.import_users),
             ('category.csv', self.import_categories),
             ('genre.csv', self.import_genres),
             ('titles.csv', self.import_titles),
-            # ('reviews.csv', self.import_reviews),
-            # ('comments.csv', self.import_comments),
+            ('review.csv', self.import_reviews),
+            ('comments.csv', self.import_comments),
             ('genre_title.csv', self.import_genre_titles),
         ]
 
@@ -37,11 +41,22 @@ class Command(BaseCommand):
         csv_file = open(path, encoding='utf-8')
         return csv.DictReader(csv_file)
 
-    # def import_users(self, file_name):
-    #     reader = self.get_reader(file_name)
-    #     if reader:
-    #         for row in reader:
-    #             User.objects.get_or_create(**row)
+    def import_users(self, file_name):
+        reader = self.get_reader(file_name)
+        if reader:
+            for row in reader:
+                row_id = row.pop('id')
+                user, created = User.objects.update_or_create(
+                    id=row_id,
+                    defaults={
+                        'username': row['username'],
+                        'email': row['email'],
+                        'role': row.get('role', 'user'),
+                        'bio': row.get('bio', ''),
+                        'first_name': row.get('first_name', ''),
+                        'last_name': row.get('last_name', ''),
+                    }
+                )
 
     def import_categories(self, file_name):
         reader = self.get_reader(file_name)
@@ -59,25 +74,48 @@ class Command(BaseCommand):
         reader = self.get_reader(file_name)
         if reader:
             for row in reader:
-                # В CSV 'category', а в БД колонка 'category_id'
                 row['category_id'] = row.pop('category')
                 Title.objects.get_or_create(**row)
 
-    # def import_reviews(self, file_name):
-    #     reader = self.get_reader(file_name)
-    #     if reader:
-    #         for row in reader:
-    #             # В CSV 'author', а в БД колонка 'author_id'
-    #             row['author_id'] = row.pop('author')
-    #             Review.objects.get_or_create(**row)
+    def import_reviews(self, file_name):
+        reader = self.get_reader(file_name)
+        if reader:
+            for row in reader:
+                try:
+                    user = User.objects.get(id=row['author'])
+                    title = Title.objects.get(id=row['title_id'])
+                except User.DoesNotExist:
+                    self.stdout.write(self.style.ERROR(f"Пользователь {row['author']} не найден!"))
+                    continue
+                except Title.DoesNotExist:
+                    self.stdout.write(self.style.ERROR(f"Тайтл {row['title_id']} не найден!"))
+                    continue
 
-    # def import_comments(self, file_name):
-    #     reader = self.get_reader(file_name)
-    #     if reader:
-    #         for row in reader:
-    #             # В CSV 'author', а в БД колонка 'author_id'
-    #             row['author_id'] = row.pop('author')
-    #             Comment.objects.get_or_create(**row)
+                row_id = row.pop('id')
+                row['author_id'] = row.pop('author')
+                Review.objects.update_or_create(id=row_id, defaults=row)
+
+    def import_comments(self, file_name):
+        reader = self.get_reader(file_name)
+        if reader:
+            for row in reader:
+                try:
+                    user = User.objects.get(id=row['author'])
+                    review = Review.objects.get(id=row['review_id'])
+                except User.DoesNotExist:
+                    self.stdout.write(self.style.ERROR(
+                        f"Пользователь {row['author']} не найден!"
+                    ))
+                    continue
+                except Review.DoesNotExist:
+                    self.stdout.write(self.style.ERROR(
+                        f"Ревью {row['review_id']} не найдено!"
+                    ))
+                    continue
+
+                row_id = row.pop('id')
+                row['author_id'] = row.pop('author')
+                Comment.objects.update_or_create(id=row_id, defaults=row)
 
     def import_genre_titles(self, file_name):
         reader = self.get_reader(file_name)
