@@ -1,4 +1,4 @@
-from rest_framework import viewsets, mixins, pagination, filters, permissions
+from rest_framework import filters, mixins, pagination, viewsets
 
 from .permissions import IsAdminOrReadOnly
 
