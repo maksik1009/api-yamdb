@@ -84,10 +84,18 @@ class Command(BaseCommand):
                     user = User.objects.get(id=row['author'])
                     title = Title.objects.get(id=row['title_id'])
                 except User.DoesNotExist:
-                    self.stdout.write(self.style.ERROR(f"Пользователь {row['author']} не найден!"))
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"Пользователь {row['author']} не найден!"
+                            )
+                        )
                     continue
                 except Title.DoesNotExist:
-                    self.stdout.write(self.style.ERROR(f"Тайтл {row['title_id']} не найден!"))
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"Тайтл {row['title_id']} не найден!"
+                            )
+                        )
                     continue
 
                 row_id = row.pop('id')
@@ -101,15 +109,13 @@ class Command(BaseCommand):
                 try:
                     user = User.objects.get(id=row['author'])
                     review = Review.objects.get(id=row['review_id'])
-                except User.DoesNotExist:
-                    self.stdout.write(self.style.ERROR(
-                        f"Пользователь {row['author']} не найден!"
-                    ))
+                except User.DoesNotExist(
+                    f'{user} или {review} еще не были созданы!'
+                ):
                     continue
-                except Review.DoesNotExist:
-                    self.stdout.write(self.style.ERROR(
-                        f"Ревью {row['review_id']} не найдено!"
-                    ))
+                except Review.DoesNotExist(
+                    f'{user} или {review} еще не были созданы!'
+                ):
                     continue
 
                 row_id = row.pop('id')
