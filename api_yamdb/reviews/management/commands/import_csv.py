@@ -84,15 +84,15 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.ERROR(
                             f"Пользователь {row['author']} не найден!"
-                            )
                         )
+                    )
                     continue
                 if not Title.objects.filter(id=row['title_id']).exists():
                     self.stdout.write(
                         self.style.ERROR(
                             f"Произведение {row['title_id']} не найдено!"
-                            )
                         )
+                    )
                     continue
 
                 row_id = row.pop('id')
