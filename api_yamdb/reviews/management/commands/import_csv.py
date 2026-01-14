@@ -107,15 +107,15 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.ERROR(
                             f"Пользователь {row['author']} не найден!"
-                            )
                         )
+                    )
                     continue
                 if not Review.objects.filter(id=row['review_id']).exists():
                     self.stdout.write(
                         self.style.ERROR(
                             f"Ревью {row['review_id']} не найдено!"
-                            )
                         )
+                    )
                     continue
 
                 row_id = row.pop('id')
