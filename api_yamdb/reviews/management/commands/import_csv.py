@@ -80,20 +80,17 @@ class Command(BaseCommand):
         reader = self.get_reader(file_name)
         if reader:
             for row in reader:
-                try:
-                    user = User.objects.get(id=row['author'])
-                    title = Title.objects.get(id=row['title_id'])
-                except User.DoesNotExist:
+                if not User.objects.filter(id=row['author']).exists():
                     self.stdout.write(
                         self.style.ERROR(
                             f"Пользователь {row['author']} не найден!"
                             )
                         )
                     continue
-                except Title.DoesNotExist:
+                if not Title.objects.filter(id=row['title_id']).exists():
                     self.stdout.write(
                         self.style.ERROR(
-                            f"Тайтл {row['title_id']} не найден!"
+                            f"Произведение {row['title_id']} не найдено!"
                             )
                         )
                     continue
@@ -106,16 +103,19 @@ class Command(BaseCommand):
         reader = self.get_reader(file_name)
         if reader:
             for row in reader:
-                try:
-                    user = User.objects.get(id=row['author'])
-                    review = Review.objects.get(id=row['review_id'])
-                except User.DoesNotExist(
-                    f'{user} или {review} еще не были созданы!'
-                ):
+                if not User.objects.filter(id=row['author']).exists():
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"Пользователь {row['author']} не найден!"
+                            )
+                        )
                     continue
-                except Review.DoesNotExist(
-                    f'{user} или {review} еще не были созданы!'
-                ):
+                if not Review.objects.filter(id=row['review_id']).exists():
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"Ревью {row['review_id']} не найдено!"
+                            )
+                        )
                     continue
 
                 row_id = row.pop('id')
