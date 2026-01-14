@@ -1,8 +1,8 @@
 import re
 
 from django.conf import settings
-from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 
 def check_username(username):
@@ -41,6 +41,7 @@ class UsernameValidator:
 class RegirteredUsernameValidator:
     def validate_username(self, value):
         from reviews.models import User
+
         # get_object_or_404(User, username=value)
         if not User.objects.filter(username=value).exists():
             raise serializers.ValidationError('Пользователь не найден.')
