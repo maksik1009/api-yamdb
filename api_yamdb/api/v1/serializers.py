@@ -1,46 +1,46 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from reviews.models import (MAX_EMAIL_LENGTH, MAX_USERNAME_LENGTH, Category,
-                            Comment, Genre, Review, Title)
-from reviews.validators import UsernameValidator
+from reviews.validators import unicode_validator, validate_username_not_me
+from reviews.models import (Category, Comment, Genre, Review, Title)
 
 User = get_user_model()
 
 
-class SignupSerializer(UsernameValidator, serializers.Serializer):
+class SignupSerializer(serializers.Serializer):
     username = serializers.CharField(
-        required=True, max_length=MAX_USERNAME_LENGTH)
-    email = serializers.EmailField(
-        required=True, max_length=MAX_EMAIL_LENGTH)
+        required=True,
+        max_length=150,
+        validators=[unicode_validator, validate_username_not_me]
+    )
+    email = serializers.EmailField(required=True, max_length=254)
 
-    def create(self, validated_data):
-        """Переопределённая логика создания пользователя"""
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']
-        )
-        return user
-
-    class Meta:
-        model = User
-        fields = ('username', 'email', 'password')
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
+    def validate_username(self, value):
+        if value.lower() == 'me':
+            raise serializers.ValidationError('Имя "me" неподходит')
+        return value
 
 
 class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=MAX_USERNAME_LENGTH, required=True)
+        required=True,
+        max_length=150,
+        validators=[UnicodeUsernameValidator()]
+    )
     confirmation_code = serializers.CharField(
-        max_length=settings.CONFIRMATION_CODE_LENGTH, required=True)
+        required=True
+    )
+
+    def validate_username(self, value):
+        if value.lower() == 'me':
+            raise serializers.ValidationError(
+                'Использовать имя "me" запрещено.'
+            )
+        return value
 
 
-class UserSerializer(UsernameValidator, serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
@@ -53,15 +53,6 @@ class UserMeSerializer(serializers.ModelSerializer):
         fields = (
             'username', 'email', 'first_name',
             'last_name', 'bio', 'role'
-        )
-        read_only_fields = ('role',)
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
         read_only_fields = ('role',)
 
@@ -79,7 +70,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class TitleSerializers(serializers.ModelSerializer):
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = Title
@@ -132,13 +123,13 @@ class ReviewSerializer(BaseReviewCommentSerializer):
     class Meta(BaseReviewCommentSerializer.Meta):
         model = Review
         fields = BaseReviewCommentSerializer.Meta.fields + ('score',)
-        read_only_fields = ('title',)
 
     def validate(self, attrs):
-        user = self.context['request'].user
+        request = self.context.get('request')
+        if request.method != 'POST':
+            return attrs
+        user = request.user
         title_id = self.context['view'].kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
-        existing_review = title.reviews.filter(author=user).exists()
-        if existing_review and self.context['request'].method == 'POST':
-            raise ValidationError("Вы уже оставили отзыв.")
+        if Review.objects.filter(author=user, title_id=title_id).exists():
+            raise ValidationError("Вы уже оставили отзыв на это произведение.")
         return attrs

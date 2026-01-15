@@ -1,19 +1,21 @@
-import random
-
-from api.filters import TitleFilter
-from api.permissions import IsAdmin, IsAdminOrReadOnly, IsOwnerOrReadOnly
-from api.serializers import (SignupSerializer, TokenObtainSerializer,
-                             UserSerializer)
-from api.viewsets import CategoryGenreViewSet
+from .filters import TitleFilter
+from .permissions import (
+    IsAdminOrReadOnly, IsOwnerOrReadOnly
+)
+from .serializers import (
+    SignupSerializer, TokenObtainSerializer,
+    UserSerializer
+)
+from .viewsets import CategoryGenreViewSet
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import filters, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -56,42 +58,26 @@ class SignupView(APIView):
             and user_by_username == user_by_email
         ):
             user = user_by_username
-
         elif user_by_username:
-            raise serializers.ValidationError({
-                'username': [EMAIL_ERROR_MESSAGE]
-            })
-
+            raise serializers.ValidationError(
+                {'username': [EMAIL_ERROR_MESSAGE]})
         elif user_by_email:
-            raise serializers.ValidationError({
-                'email': [EMAIL_ALIEN_ERROR_MESSAGE]
-            })
-
+            raise serializers.ValidationError(
+                {'email': [EMAIL_ALIEN_ERROR_MESSAGE]})
         else:
             user = User.objects.create(username=username, email=email)
 
-        confirmation_code = ''.join(
-            random.choices(
-                settings.CONFIRMATION_CODE_CHARS,
-                k=settings.CONFIRMATION_CODE_LENGTH
-            ))
-        user.confirmation_code = confirmation_code
-        user.save(update_fields=['confirmation_code'])
+        confirmation_code = default_token_generator.make_token(user)
 
         send_mail(
             subject='Код подтверждения YaMDb',
-            message=(
-                f'Ваш код подтверждения: {confirmation_code}\n'
-                'Используйте код для получения токена.'
-            ),
-            from_email='noreply@yamdb.mail.ru',
+            message=f'Ваш код подтверждения: {confirmation_code}',
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
             fail_silently=False,
         )
 
-        return Response(
-            {'email': email, 'username': username}
-        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TokenObtainView(APIView):
@@ -105,39 +91,25 @@ class TokenObtainView(APIView):
 
         user = get_object_or_404(User, username=username)
 
-        if len(confirmation_code) != settings.CONFIRMATION_CODE_LENGTH:
-            raise ValidationError('Неправильная длина кода подтверждения.')
-        elif confirmation_code != user.confirmation_code:
-            raise ValidationError('Неверный код подтверждения.')
-
-        user.confirmation_code = ''
-        user.save(update_fields=['confirmation_code'])
+        if not default_token_generator.check_token(user, confirmation_code):
+            raise serializers.ValidationError({
+                'confirmation_code': 'Неверный код подтверждения'
+            })
 
         token = AccessToken.for_user(user)
         return Response({'token': str(token)}, status=status.HTTP_200_OK)
 
 
-class UserPagination(PageNumberPagination):
-    """Класс для постраничной навигации"""
-    page_size = 10
-
-
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
-    pagination_class = UserPagination
+    pagination_class = PageNumberPagination
     lookup_field = 'username'
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name', 'role']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
-    def get_permissions(self):
-        if self.action == 'me' or (
-            self.request.method == 'DELETE'
-            and self.request.path.endswith('/me/')
-        ):
-            return [permissions.IsAuthenticated()]
-        return [IsAdmin()]
+    permission_classes = (permissions.IsAdminUser,)
 
     @action(
         detail=False,
