@@ -69,7 +69,16 @@ class GenreSerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializers(serializers.ModelSerializer):
+class TitleSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Category.objects.all()
+    )
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        many=True,
+        queryset=Genre.objects.all()
+    )
     rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
@@ -78,51 +87,39 @@ class TitleSerializers(serializers.ModelSerializer):
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
 
-class TitleWriteSerializers(TitleSerializers):
-    category = serializers.SlugRelatedField(
-        slug_field='slug',
-        queryset=Category.objects.all()
-    )
-    genre = serializers.SlugRelatedField(
-        slug_field='slug',
-        queryset=Genre.objects.all(),
-        many=True
-    )
+        representation['category'] = CategorySerializer(
+            instance.category
+        ).data
 
+        representation['genre'] = GenreSerializer(
+            instance.genre.all(), many=True
+        ).data
 
-class TitleReadSerializers(TitleSerializers):
-    category = CategorySerializer(read_only=True)
-    genre = GenreSerializer(read_only=True, many=True)
-
-    class Meta:
-        model = Title
-        fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
-        )
+        return representation
 
 
-class BaseReviewCommentSerializer(serializers.ModelSerializer):
+class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
-        read_only=True, slug_field='username')
+        read_only=True, slug_field='username'
+    )
 
     class Meta:
-        abstract = True
+        model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
 
 
-class CommentSerializer(BaseReviewCommentSerializer):
-    class Meta(BaseReviewCommentSerializer.Meta):
-        model = Comment
-        read_only_fields = ('review',)
-
-
-class ReviewSerializer(BaseReviewCommentSerializer):
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True, slug_field='username'
+    )
     score = serializers.IntegerField(min_value=1, max_value=10)
 
-    class Meta(BaseReviewCommentSerializer.Meta):
+    class Meta:
         model = Review
-        fields = BaseReviewCommentSerializer.Meta.fields + ('score',)
+        fields = ('id', 'text', 'author', 'pub_date', 'score')
 
     def validate(self, attrs):
         request = self.context.get('request')
