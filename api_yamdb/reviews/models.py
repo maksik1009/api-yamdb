@@ -13,6 +13,8 @@ MAX_USERNAME_LENGTH = 150
 MAX_EMAIL_LENGTH = 254
 MAX_NAME_LENGTH = 100
 MAX_ROLE_LENGTH = 12
+MAX_NAME_FIELD_LENGTH = 256
+MAX_SLUG_FIELD_LENGTH = 50
 
 USER = 'user'
 MODERATOR = 'moderator'
@@ -86,37 +88,45 @@ class User(AbstractUser):
 
 class Genre(models.Model):
     name = models.CharField(
-        max_length=50,
+        max_length=MAX_NAME_FIELD_LENGTH,
         verbose_name='Название жанра'
     )
-    slug = models.SlugField(unique=True, verbose_name='Слаг')
-
-    def __str__(self):
-        return self.name
+    slug = models.SlugField(
+        max_length=MAX_SLUG_FIELD_LENGTH,
+        unique=True,
+        verbose_name='Слаг',
+    )
 
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанра'
 
+    def __str__(self):
+        return self.name
+
 
 class Category(models.Model):
     name = models.CharField(
-        max_length=50,
+        max_length=MAX_NAME_FIELD_LENGTH,
         verbose_name='Название категории'
     )
-    slug = models.SlugField(unique=True, verbose_name='Слаг')
-
-    def __str__(self):
-        return self.name
+    slug = models.SlugField(
+        max_length=MAX_SLUG_FIELD_LENGTH,
+        unique=True,
+        verbose_name='Слаг',
+    )
 
     class Meta:
         verbose_name = 'категорию'
         verbose_name_plural = 'Категории'
 
+    def __str__(self):
+        return self.name
+
 
 class Title(models.Model):
     name = models.CharField(
-        max_length=256,
+        max_length=MAX_NAME_FIELD_LENGTH,
         verbose_name='Название'
     )
     year = models.SmallIntegerField(

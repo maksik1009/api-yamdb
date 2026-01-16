@@ -1,45 +1,138 @@
-# api_final
-api final
-Установка проекта Ubuntu, Windows
-Клонировать репозиторий:
+На основе ваших данных я подготовил структурированный `README.md`. Он оформлен в соответствии с требованиями ревьюеров: с четкой иерархией, блоками кода и описанием всех процессов.
 
-git clone git@github.com:Dumskii-Artem/api_final_yatube.git
-Перейти в папку с проектом:
+---
 
-cd api_final_yatube/
-Cоздать виртуальное окружение:
+# Проект YaMDb
 
-Ubuntu: python3 -m venv env
-Windows: py -3.9 -m venv env
-Активировать виртуальное окружение:
+### Описание
 
-Ubuntu: source env/bin/activate
-Windows: source ./env/Scripts/activate
-    или ./env/Scripts/activate
-Вот так написать:
+Проект **YaMDb** — это сервис, который собирает отзывы пользователей на различные произведения. Произведения делятся на категории: «Книги», «Фильмы», «Музыка». Сами произведения не хранятся в приложении, здесь нельзя посмотреть фильм или послушать музыку.
+Благодаря YaMDb пользователи могут ставить произведениям оценки и оставлять отзывы, на основании которых формируется усредненный рейтинг.
 
-Ubuntu: python3 -m pip install --upgrade pip
-Windows: python -m pip install --upgrade pip
-Установить зависимости из файла requirements.txt:
+### Стек технологий
 
+* **Python 3.9+**
+* **Django 3.2+**
+* **Django Rest Framework**
+* **SimpleJWT** (аутентификация по токенам)
+* **SQLite3** (база данных)
+* **Redoc** (документация API)
+
+---
+
+### Инструкция по развертыванию
+
+1. **Клонируйте репозиторий:**
+```bash
+git clone https://github.com/maksik1009/api_yamdb.git
+cd api_yamdb
+
+```
+
+
+2. **Cоздайте и активируйте виртуальное окружение:**
+```bash
+python -m venv venv
+source venv/Scripts/activate  # Для Windows
+source venv/bin/activate       # Для Linux/macOS
+
+```
+
+
+3. **Установите зависимости:**
+```bash
 pip install -r requirements.txt
-Зайти в папку:
 
-cd yatube_api/
-Выполнить миграции:
+```
 
-Ubuntu: python3 manage.py makemigrations
-        python3 manage.py migrate
-Windows: python manage.py makemigrations
-         python manage.py migrate
-Запустить скрипт для создания пользователей, нужно для прохождения тестов
 
-в среде Windows выполняется в GitBash предварительно нужно создать виртуальное окружение в GitBash
+4. **Выполните миграции:**
+```bash
+python manage.py migrate
 
-bash ../postman_collection/set_up_data.sh 
-Запустить проект:
+```
 
-Ubuntu: python3 manage.py runserver
-Windows: python manage.py runserver
 
-Откройте браузер и перейдите по адресу http://localhost:8000/admin/, чтобы войти в админ-панель.
+5. **Запустите проект:**
+```bash
+python manage.py runserver
+
+```
+
+
+Проект будет доступен по адресу: [http://127.0.0.1:8000/]
+
+---
+
+### Наполнение базы данными
+
+В проекте реализована возможность автоматического импорта данных из CSV-файлов, расположенных в директории `static/data/`.
+
+Для загрузки данных выполните команду:
+
+```bash
+python manage.py import_csv
+
+```
+
+---
+
+### Документация API
+
+Документация доступна в формате **Redoc**. В ней описаны все эндпоинты, методы и примеры ответов.
+
+* Адрес документации: [http://127.0.0.1:8000/redoc/](https://www.google.com/search?q=http://127.0.0.1:8000/redoc/)
+
+---
+
+### Алгоритм регистрации и аутентификации
+
+1. Пользователь отправляет POST-запрос с параметрами `email` и `username` на эндпоинт `/api/v1/auth/signup/`.
+2. Сервис отправляет письмо с кодом подтверждения (`confirmation_code`) на указанный адрес (в режиме разработки письма сохраняются в папку `/emails/`).
+3. Пользователь отправляет POST-запрос с параметрами `username` и `confirmation_code` на эндпоинт `/api/v1/auth/token/`. В ответе на запрос ему приходит `token` (JWT-токен).
+4. При любых запросах к API токен передается в заголовке `Authorization: Bearer <token>`.
+
+---
+
+### Примеры запросов
+
+**1. Получение списка всех произведений (GET):**
+`bash GET /api/v1/titles/ `
+**Ответ:**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Побег из Шоушенка",
+    "year": 1994,
+    "rating": 10,
+    "description": "Легендарная драма",
+    "genre": [{"name": "Драма", "slug": "drama"}],
+    "category": {"name": "Фильм", "slug": "movie"}
+  }
+]
+
+```
+
+**2. Добавление новой категории (POST, только для администратора):**
+`bash POST /api/v1/categories/ `
+**Тело запроса:**
+
+```json
+{
+  "name": "Видеоигры",
+  "slug": "games"
+}
+
+```
+
+---
+
+### Автор
+
+Максим - [https://github.com/maksik1009]
+Роман - [https://github.com/POMA67]
+Студент Яндекс Практикума.
+
+---
