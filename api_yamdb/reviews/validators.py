@@ -1,50 +1,29 @@
-import re
-
+import datetime
 from django.conf import settings
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from django.contrib.auth.validators import UnicodeUsernameValidator
+
+from django.core.exceptions import ValidationError
 
 
-def check_username(username):
-    if username.upper() in (
-            name.upper()
-            for name in settings.FORBIDDEN_USERNAMES
-    ):
+def validate_year(value):
+    """Проверка, что год выпуска не больше текущего."""
+    current_year = datetime.date.today().year
+    if value > current_year:
         raise ValidationError(
-            f"Имя '{username}' не разрешено."
-        )
-
-    match = re.match(
-        r'^\^\[([^\]]+)\]\+\\Z$',
-        settings.USERNAME_REGEX
-    )
-
-    if not match:
-        raise ValueError(
-            'USERNAME_REGEX не соответствует ожидаемому формату')
-
-    wrong_chars = re.findall(rf'[^{match.group(1)}]', username)
-
-    if wrong_chars:
-        raise ValidationError(
-            'Имя содержит недопустимые символы: '
-            f'{", ".join(sorted(set(wrong_chars)))}'
+            f'Год выпуска {value}'
+            f'не может быть больше текущего {current_year}!'
         )
 
 
-class UsernameValidator:
-    def validate_username(self, value):
-        check_username(value)
-        return value
+def validate_username_not_me(value):
+    """имя пользователя 'me' не входит в список запрещенных"""
+
+    forbidden = getattr(settings, 'FORBIDDEN_USERNAMES', ['me'])
+
+    if value.lower() in [name.lower() for name in forbidden]:
+        raise ValidationError(
+            f'Использовать имя "{value}" в качестве логина запрещено.'
+        )
 
 
-class RegirteredUsernameValidator:
-    def validate_username(self, value):
-        from reviews.models import User
-
-        # get_object_or_404(User, username=value)
-        if not User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('Пользователь не найден.')
-
-        check_username(value)
-        return value
+unicode_validator = UnicodeUsernameValidator()

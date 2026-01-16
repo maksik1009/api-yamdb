@@ -1,12 +1,11 @@
-import datetime
-
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from reviews.validators import check_username
-
-from api_yamdb import settings
-
+from reviews.validators import (
+    unicode_validator,
+    validate_username_not_me,
+    validate_year
+)
 
 MIN_RATING = 1
 MAX_RATING = 10
@@ -18,32 +17,32 @@ MAX_ROLE_LENGTH = 12
 USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
-ROLE_CHOICES = [
-    (USER, 'Пользователь'),
-    (MODERATOR, 'Модератор'),
-    (ADMIN, 'Администратор'),
-]
 
 
 class User(AbstractUser):
+
+    class Role(models.TextChoices):
+        USER = 'user', 'Пользователь'
+        MODERATOR = 'moderator', 'Модератор'
+        ADMIN = 'admin', 'Администратор'
+
+    role = models.CharField(
+        'Роль',
+        max_length=20,
+        choices=Role.choices,
+        default=Role.USER,
+    )
+
     username = models.CharField(
         verbose_name='Логин',
-        max_length=MAX_USERNAME_LENGTH,
+        max_length=150,
         unique=True,
-        validators=[check_username],
+        validators=[unicode_validator, validate_username_not_me],
     )
 
     email = models.EmailField(
         verbose_name='Email',
-        max_length=MAX_EMAIL_LENGTH,
         unique=True,
-    )
-
-    role = models.CharField(
-        verbose_name='Роль',
-        max_length=max(len(role) for role, _ in ROLE_CHOICES),
-        choices=ROLE_CHOICES,
-        default=USER,
     )
 
     bio = models.TextField(
@@ -63,36 +62,26 @@ class User(AbstractUser):
         blank=True,
     )
 
-    confirmation_code = models.CharField(
-        max_length=settings.CONFIRMATION_CODE_LENGTH,
-        blank=True,
-    )
-
-    groups = models.ManyToManyField(
-        'auth.Group',
-        verbose_name='Группы',
-        blank=True,
-        related_name="custom_user_groups",
-    )
-
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        verbose_name='Пользовательские права',
-        blank=True,
-        related_name="custom_user_permissions",
-    )
-
     @property
     def is_admin(self):
-        return self.is_staff or self.role == ADMIN
+        return self.role == 'admin' or self.is_superuser
+
+    def save(self, *args, **kwargs):
+        if self.is_admin:
+            self.is_staff = True
+        super().save(*args, **kwargs)
 
     @property
     def is_moderator(self):
         return self.role == MODERATOR
 
-    @property
-    def is_user(self):
-        return self.role == USER
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+        ordering = ('id',)
+
+    def __str__(self):
+        return self.username
 
 
 class Genre(models.Model):
@@ -127,16 +116,15 @@ class Category(models.Model):
 
 class Title(models.Model):
     name = models.CharField(
-        max_length=200,
+        max_length=256,
         verbose_name='Название'
     )
-    year = models.IntegerField(
-        validators=[
-            MinValueValidator(1800),
-            MaxValueValidator(datetime.date.today().year)
-        ],
-        verbose_name='Год выпуска'
+    year = models.SmallIntegerField(
+        validators=[validate_year],
+        verbose_name='Год выпуска',
+        db_index=True
     )
+
     description = models.TextField(blank=True, verbose_name='Описание')
     genre = models.ManyToManyField(
         Genre,
@@ -152,7 +140,7 @@ class Title(models.Model):
     )
 
     class Meta:
-        ordering = ['-year']
+        ordering = ('-year',)
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
 
@@ -189,7 +177,7 @@ class Review(models.Model):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         default_related_name = 'reviews'
-        ordering = ['-pub_date']
+        ordering = ('-pub_date',)
         constraints = [
             models.UniqueConstraint(
                 fields=['author', 'title'],
@@ -225,7 +213,7 @@ class Comment(models.Model):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
         default_related_name = 'comments'
-        ordering = ['-pub_date']
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return (
