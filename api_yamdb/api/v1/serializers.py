@@ -69,7 +69,7 @@ class GenreSerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Category.objects.all()
@@ -88,17 +88,19 @@ class TitleSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance):
-        representation = super().to_representation(instance)
+        return TitleReadSerializer(instance).data
 
-        representation['category'] = CategorySerializer(
-            instance.category
-        ).data
 
-        representation['genre'] = GenreSerializer(
-            instance.genre.all(), many=True
-        ).data
+class TitleReadSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(read_only=True, many=True)
+    rating = serializers.IntegerField(read_only=True, default=None)
 
-        return representation
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
 
 
 class CommentSerializer(serializers.ModelSerializer):
