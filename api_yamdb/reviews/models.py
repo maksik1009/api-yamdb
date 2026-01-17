@@ -3,7 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from reviews.validators import (
     unicode_validator,
-    validate_username_not_me,
+    validate_username,
     validate_year
 )
 
@@ -22,7 +22,6 @@ ADMIN = 'admin'
 
 
 class User(AbstractUser):
-
     class Role(models.TextChoices):
         USER = 'user', 'Пользователь'
         MODERATOR = 'moderator', 'Модератор'
@@ -30,21 +29,22 @@ class User(AbstractUser):
 
     role = models.CharField(
         'Роль',
-        max_length=20,
+        max_length=MAX_ROLE_LENGTH,
         choices=Role.choices,
         default=Role.USER,
     )
 
     username = models.CharField(
         verbose_name='Логин',
-        max_length=150,
+        max_length=MAX_USERNAME_LENGTH,
         unique=True,
-        validators=[unicode_validator, validate_username_not_me],
+        validators=[unicode_validator, validate_username],
     )
 
     email = models.EmailField(
         verbose_name='Email',
         unique=True,
+        max_length=MAX_EMAIL_LENGTH,
     )
 
     bio = models.TextField(
@@ -64,26 +64,25 @@ class User(AbstractUser):
         blank=True,
     )
 
-    @property
-    def is_admin(self):
-        return self.role == 'admin' or self.is_superuser
-
-    def save(self, *args, **kwargs):
-        if self.is_admin:
-            self.is_staff = True
-        super().save(*args, **kwargs)
-
-    @property
-    def is_moderator(self):
-        return self.role == MODERATOR
-
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-        ordering = ('id',)
+        ordering = ('username', 'email', 'id')
 
     def __str__(self):
         return self.username
+
+    @property
+    def is_admin(self):
+        return (
+            self.role == self.Role.ADMIN
+            or self.is_superuser
+            or self.is_staff
+        )
+
+    @property
+    def is_moderator(self):
+        return self.role == self.Role.MODERATOR
 
 
 class Genre(models.Model):

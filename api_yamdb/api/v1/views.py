@@ -1,6 +1,6 @@
 from .filters import TitleFilter
 from .permissions import (
-    IsAdminOrReadOnly, IsOwnerOrReadOnly
+    IsAdminOrReadOnly, IsAdminRole, IsOwnerOrReadOnly
 )
 from .serializers import (
     SignupSerializer, TokenObtainSerializer,
@@ -39,33 +39,9 @@ class SignupView(APIView):
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
-
-        user_by_username = User.objects.filter(username=username).first()
-        user_by_email = User.objects.filter(email=email).first()
-
-        if (user_by_username and user_by_email
-                and user_by_username != user_by_email):
-            raise serializers.ValidationError({
-                'username': [USERNAME_ERROR_MESSAGE],
-                'email': [EMAIL_ALIEN_ERROR_MESSAGE]
-            })
-
-        if (
-            user_by_username
-            and user_by_email
-            and user_by_username == user_by_email
-        ):
-            user = user_by_username
-        elif user_by_username:
-            raise serializers.ValidationError(
-                {'username': [EMAIL_ERROR_MESSAGE]})
-        elif user_by_email:
-            raise serializers.ValidationError(
-                {'email': [EMAIL_ALIEN_ERROR_MESSAGE]})
-        else:
-            user = User.objects.create(username=username, email=email)
+        username = serializer.validated_data.get('username')
+        email = serializer.validated_data.get('email')
+        user = User.objects.get_or_create(username=username, email=email)[0]
 
         confirmation_code = default_token_generator.make_token(user)
 
@@ -105,17 +81,16 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     pagination_class = PageNumberPagination
     lookup_field = 'username'
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['username', 'email', 'first_name', 'last_name', 'role']
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
-
-    permission_classes = (permissions.IsAdminUser,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = (IsAdminRole,)
 
     @action(
         detail=False,
         methods=['get', 'patch'],
         url_path='me',
-        permission_classes=[permissions.IsAuthenticated]
+        permission_classes=(permissions.IsAuthenticated,)
     )
     def me(self, request):
         user = request.user
