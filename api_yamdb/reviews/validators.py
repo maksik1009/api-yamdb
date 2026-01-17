@@ -15,12 +15,9 @@ def validate_year(value):
         )
 
 
-def validate_username_not_me(value):
-    """имя пользователя 'me' не входит в список запрещенных"""
-
-    forbidden = getattr(settings, 'FORBIDDEN_USERNAMES', ['me'])
-
-    if value.lower() in [name.lower() for name in forbidden]:
+def validate_username(value):
+    """Проверка, что имя пользователя не входит в список запрещенных."""
+    if value.lower() in getattr(settings, 'FORBIDDEN_USERNAMES', ['me']):
         raise ValidationError(
             f'Использовать имя "{value}" в качестве логина запрещено.'
         )

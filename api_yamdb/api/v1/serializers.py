@@ -2,8 +2,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from reviews.validators import unicode_validator, validate_username_not_me
-from reviews.models import (Category, Comment, Genre, Review, Title)
+from reviews.validators import unicode_validator, validate_username
+from reviews.models import (
+    Category, Comment, Genre, Review, Title,
+    MAX_USERNAME_LENGTH, MAX_EMAIL_LENGTH
+)
 
 User = get_user_model()
 
@@ -11,22 +14,40 @@ User = get_user_model()
 class SignupSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=150,
-        validators=[unicode_validator, validate_username_not_me]
+        max_length=MAX_USERNAME_LENGTH,
+        validators=[unicode_validator, validate_username]
     )
-    email = serializers.EmailField(required=True, max_length=254)
+    email = serializers.EmailField(
+        required=True,
+        max_length=MAX_EMAIL_LENGTH
+    )
 
-    def validate_username(self, value):
-        if value.lower() == 'me':
-            raise serializers.ValidationError('Имя "me" неподходит')
-        return value
+    def validate(self, data):
+        username = data.get('username')
+        email = data.get('email')
+
+        if User.objects.filter(
+            username=username
+        ).exclude(email=email).exists():
+            raise serializers.ValidationError(
+                {'username': 'Это имя уже занято другим пользователем.'}
+            )
+
+        if User.objects.filter(
+            email=email
+        ).exclude(username=username).exists():
+            raise serializers.ValidationError(
+                {'email': 'Эта почта уже занята другим пользователем.'}
+            )
+
+        return data
 
 
 class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=150,
-        validators=[UnicodeUsernameValidator()]
+        max_length=MAX_USERNAME_LENGTH,
+        validators=[unicode_validator, validate_username]
     )
     confirmation_code = serializers.CharField(
         required=True
@@ -69,7 +90,7 @@ class GenreSerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Category.objects.all()
@@ -88,17 +109,19 @@ class TitleSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance):
-        representation = super().to_representation(instance)
+        return TitleReadSerializer(instance).data
 
-        representation['category'] = CategorySerializer(
-            instance.category
-        ).data
 
-        representation['genre'] = GenreSerializer(
-            instance.genre.all(), many=True
-        ).data
+class TitleReadSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(read_only=True, many=True)
+    rating = serializers.IntegerField(read_only=True, default=None)
 
-        return representation
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -115,7 +138,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
-    score = serializers.IntegerField(min_value=1, max_value=10)
 
     class Meta:
         model = Review
