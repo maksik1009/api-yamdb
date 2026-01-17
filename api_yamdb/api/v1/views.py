@@ -24,7 +24,7 @@ from reviews.models import Category, Genre, Review, Title
 
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer,
-                          TitleSerializer)
+                          TitleWriteSerializer, TitleReadSerializer)
 
 USERNAME_ERROR_MESSAGE = 'Пользователь с таким username уже зарегистрирован'
 EMAIL_ERROR_MESSAGE = 'Такой email уже занят другим пользователем'
@@ -144,10 +144,14 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
     ).order_by('id')
-    serializer_class = TitleSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return TitleReadSerializer
+        return TitleWriteSerializer
 
 
 class CommentViewSet(viewsets.ModelViewSet):
