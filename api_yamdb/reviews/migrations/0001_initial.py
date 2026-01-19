@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
                 ('role', models.CharField(choices=[('user', 'Пользователь'), ('moderator', 'Модератор'), ('admin', 'Администратор')], default='user', max_length=20, verbose_name='Роль')),
-                ('username', models.CharField(max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator(), reviews.validators.validate_username], verbose_name='Логин')),
+                ('username', models.CharField(max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator(), reviews.validators.validate_username_restricted], verbose_name='Логин')),
                 ('email', models.EmailField(max_length=254, unique=True, verbose_name='Email')),
                 ('bio', models.TextField(blank=True, verbose_name='Инфо')),
                 ('first_name', models.CharField(blank=True, max_length=100, verbose_name='Имя')),
