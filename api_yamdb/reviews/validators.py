@@ -1,7 +1,7 @@
 import datetime
+
 from django.conf import settings
 from django.contrib.auth.validators import UnicodeUsernameValidator
-
 from django.core.exceptions import ValidationError
 
 
@@ -15,9 +15,9 @@ def validate_year(value):
         )
 
 
-def validate_username(value):
+def validate_username_restricted(value):
     """Проверка, что имя пользователя не входит в список запрещенных."""
-    if value.lower() in getattr(settings, 'FORBIDDEN_USERNAMES', ['me']):
+    if value in settings.FORBIDDEN_USERNAMES:
         raise ValidationError(
             f'Использовать имя "{value}" в качестве логина запрещено.'
         )

@@ -1,9 +1,10 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
 from reviews.validators import (
     unicode_validator,
-    validate_username,
+    validate_username_restricted,
     validate_year
 )
 
@@ -16,7 +17,6 @@ MAX_ROLE_LENGTH = 12
 MAX_NAME_FIELD_LENGTH = 256
 MAX_SLUG_FIELD_LENGTH = 50
 
-USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
 
@@ -38,7 +38,7 @@ class User(AbstractUser):
         verbose_name='Логин',
         max_length=MAX_USERNAME_LENGTH,
         unique=True,
-        validators=[unicode_validator, validate_username],
+        validators=[unicode_validator, validate_username_restricted],
     )
 
     email = models.EmailField(
@@ -77,7 +77,6 @@ class User(AbstractUser):
         return (
             self.role == self.Role.ADMIN
             or self.is_superuser
-            or self.is_staff
         )
 
     @property

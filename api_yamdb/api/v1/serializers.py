@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from reviews.validators import unicode_validator, validate_username
+
+from reviews.validators import unicode_validator, validate_username_restricted
 from reviews.models import (
     Category, Comment, Genre, Review, Title,
     MAX_USERNAME_LENGTH, MAX_EMAIL_LENGTH
@@ -15,7 +16,7 @@ class SignupSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
         max_length=MAX_USERNAME_LENGTH,
-        validators=[unicode_validator, validate_username]
+        validators=[unicode_validator, validate_username_restricted]
     )
     email = serializers.EmailField(
         required=True,
@@ -25,20 +26,20 @@ class SignupSerializer(serializers.Serializer):
     def validate(self, data):
         username = data.get('username')
         email = data.get('email')
+        errors = {}
 
         if User.objects.filter(
             username=username
         ).exclude(email=email).exists():
-            raise serializers.ValidationError(
-                {'username': 'Это имя уже занято другим пользователем.'}
-            )
+            errors['username'] = 'Это имя уже занято другим пользователем.'
 
         if User.objects.filter(
             email=email
         ).exclude(username=username).exists():
-            raise serializers.ValidationError(
-                {'email': 'Эта почта уже занята другим пользователем.'}
-            )
+            errors['email'] = 'Эта почта уже занята другим пользователем.'
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         return data
 
@@ -47,18 +48,11 @@ class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
         max_length=MAX_USERNAME_LENGTH,
-        validators=[unicode_validator, validate_username]
+        validators=[unicode_validator, validate_username_restricted]
     )
     confirmation_code = serializers.CharField(
         required=True
     )
-
-    def validate_username(self, value):
-        if value.lower() == 'me':
-            raise serializers.ValidationError(
-                'Использовать имя "me" запрещено.'
-            )
-        return value
 
 
 class UserSerializer(serializers.ModelSerializer):

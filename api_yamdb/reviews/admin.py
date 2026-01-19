@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 MAX_DISPLAY_LENGTH = 30
