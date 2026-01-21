@@ -26,16 +26,12 @@ from .serializers import (
 )
 from .viewsets import CategoryGenreViewSet
 
-USERNAME_ERROR_MESSAGE = 'Пользователь с таким username уже зарегистрирован'
-EMAIL_ERROR_MESSAGE = 'Такой email уже занят другим пользователем'
-USERNAME_EMAIL_MISMATCH = 'username и email принадлежат разным аккаунтам'
-EMAIL_ALIEN_ERROR_MESSAGE = 'Чужой email.'
-
 
 User = get_user_model()
 
 
 class SignupView(APIView):
+    """Отправка кода подтверждения на почту"""
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -77,6 +73,7 @@ class TokenObtainView(APIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Представление юзеров"""
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
     pagination_class = PageNumberPagination
@@ -105,16 +102,19 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CategoryViewSet(CategoryGenreViewSet):
+    """Представление категорий"""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(CategoryGenreViewSet):
+    """Представление жанров"""
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
+    """Представление произведений"""
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
@@ -130,6 +130,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
+    """Представление комментов"""
     serializer_class = CommentSerializer
     permission_classes = [IsOwnerOrReadOnly]
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
@@ -145,6 +146,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
+    """Представление ревью"""
     serializer_class = ReviewSerializer
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     permission_classes = [IsOwnerOrReadOnly]
