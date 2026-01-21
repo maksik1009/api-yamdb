@@ -93,12 +93,11 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         many=True,
         queryset=Genre.objects.all()
     )
-    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = Title
         fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+            'id', 'name', 'year', 'description', 'genre', 'category'
         )
 
     def to_representation(self, instance):
@@ -143,5 +142,5 @@ class ReviewSerializer(serializers.ModelSerializer):
         user = request.user
         title_id = self.context['view'].kwargs.get('title_id')
         if Review.objects.filter(author=user, title_id=title_id).exists():
-            raise ValidationError("Вы уже оставили отзыв на это произведение.")
+            raise ValidationError('Вы уже оставили отзыв на это произведение.')
         return attrs

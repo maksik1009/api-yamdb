@@ -83,14 +83,14 @@ class Command(BaseCommand):
                 if not User.objects.filter(id=row['author']).exists():
                     self.stdout.write(
                         self.style.ERROR(
-                            f"Пользователь {row['author']} не найден!"
+                            f'Пользователь {row["author"]} не найден!'
                         )
                     )
                     continue
                 if not Title.objects.filter(id=row['title_id']).exists():
                     self.stdout.write(
                         self.style.ERROR(
-                            f"Произведение {row['title_id']} не найдено!"
+                            f'Произведение {row["title_id"]} не найдено!'
                         )
                     )
                     continue
@@ -106,14 +106,14 @@ class Command(BaseCommand):
                 if not User.objects.filter(id=row['author']).exists():
                     self.stdout.write(
                         self.style.ERROR(
-                            f"Пользователь {row['author']} не найден!"
+                            f'Пользователь {row["author"]} не найден!'
                         )
                     )
                     continue
                 if not Review.objects.filter(id=row['review_id']).exists():
                     self.stdout.write(
                         self.style.ERROR(
-                            f"Ревью {row['review_id']} не найдено!"
+                            f'Ревью {row["review_id"]} не найдено!'
                         )
                     )
                     continue
