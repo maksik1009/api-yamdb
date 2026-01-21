@@ -20,7 +20,7 @@ from .permissions import (
 from .serializers import (
     CategorySerializer, CommentSerializer,
     GenreSerializer, ReviewSerializer,
-    SignupSerializer, TitleWriteSerializer, 
+    SignupSerializer, TitleWriteSerializer,
     TitleReadSerializer, TokenObtainSerializer,
     UserSerializer
 )
