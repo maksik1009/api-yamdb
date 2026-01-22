@@ -17,8 +17,6 @@ MAX_ROLE_LENGTH = 12
 MAX_NAME_FIELD_LENGTH = 256
 MAX_SLUG_FIELD_LENGTH = 50
 
-ADMIN = 'admin'
-
 
 class User(AbstractUser):
     class Role(models.TextChoices):
